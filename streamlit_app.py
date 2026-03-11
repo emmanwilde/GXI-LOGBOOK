@@ -85,17 +85,21 @@ if not df.empty:
     # Filters
     st.write("---")
     f_col1, f_col2 = st.columns(2)
-    unique_dates = sorted(df['Just Date'].unique(), reverse=True)
+    unique_dates = sorted(df['Just Date'].unique())
+    min_date = min(unique_dates)
+    max_date = max(unique_dates)
     unique_branches = sorted(df['branch_name'].unique())
     
     with f_col1:
-        selected_date = st.selectbox("📅 Filter by Date", ["All Dates"] + [d.strftime("%Y-%m-%d") for d in unique_dates])
+        date_range = st.date_input("📅 Filter by Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
     with f_col2:
         selected_branch = st.selectbox("🏢 Filter by Branch Name", ["All Branches"] + unique_branches)
 
     filtered_df = df.copy()
-    if selected_date != "All Dates":
-        filtered_df = filtered_df[filtered_df['Just Date'].astype(str) == selected_date]
+    if len(date_range) == 2:
+        filtered_df = filtered_df[(filtered_df['Just Date'] >= date_range[0]) & (filtered_df['Just Date'] <= date_range[1])]
+    elif len(date_range) == 1:
+        filtered_df = filtered_df[filtered_df['Just Date'] == date_range[0]]
     if selected_branch != "All Branches":
         filtered_df = filtered_df[filtered_df['branch_name'] == selected_branch]
 
