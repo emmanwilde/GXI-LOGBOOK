@@ -78,23 +78,32 @@ conn = sqlite3.connect("data.db")
 df = pd.read_sql_query("SELECT * FROM logs", conn)
 conn.close()
 
+# --- PROCESS DATA ---
 if not df.empty:
     df['full_dt'] = pd.to_datetime(df['transaction_date_time'])
     df['Just Date'] = df['full_dt'].dt.date
     
-    # Filters
-    st.write("---")
-    f_col1, f_col2 = st.columns(2)
     unique_dates = sorted(df['Just Date'].unique())
     min_date = min(unique_dates)
     max_date = max(unique_dates)
     unique_branches = sorted(df['branch_name'].unique())
-    
-    with f_col1:
-        date_range = st.date_input("📅 Filter by Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
-    with f_col2:
-        selected_branch = st.selectbox("🏢 Filter by Branch Name", ["All Branches"] + unique_branches)
+else:
+    unique_dates = []
+    min_date = None
+    max_date = None
+    unique_branches = []
 
+# --- MAIN LAYOUT ---
+st.write("---")
+
+if not df.empty:
+    # Filters
+    with st.sidebar:
+        st.header("🔍 Filters")
+        date_range = st.date_input("📅 Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
+        selected_branch = st.selectbox("🏢 Branch", ["All Branches"] + unique_branches)
+    
+    # Apply filters
     filtered_df = df.copy()
     if len(date_range) == 2:
         filtered_df = filtered_df[(filtered_df['Just Date'] >= date_range[0]) & (filtered_df['Just Date'] <= date_range[1])]
@@ -105,15 +114,51 @@ if not df.empty:
 
     filtered_df = filtered_df.sort_values(by=['Just Date', 'branch_name'], ascending=[False, True])
 
-    # Display
-    tab1, tab2 = st.tabs(["📋 Logbook View", "🔍 Full Masterlist"])
-    with tab1:
-        display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'channel', 'settlement_amount']
-        logbook_view = filtered_df[display_cols].copy()
-        logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Channel", "Settlement"]
-        st.dataframe(logbook_view, use_container_width=True, hide_index=True)
-    
-    with tab2:
-        st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True, hide_index=True)
+    # Two column layout
+    left_col, right_col = st.columns([2, 1])
+
+    with left_col:
+        tab1, tab2 = st.tabs(["📋 Logbook View", "🔍 Full Masterlist"])
+        with tab1:
+            display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'channel', 'settlement_amount']
+            logbook_view = filtered_df[display_cols].copy()
+            logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Channel", "Settlement"]
+            st.dataframe(logbook_view, use_container_width=True, hide_index=True)
+        
+        with tab2:
+            st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True, hide_index=True)
+
+    with right_col:
+        st.subheader("📊 Summary")
+        
+        total_transactions = len(filtered_df)
+        total_amount = filtered_df['transaction_amount'].sum()
+        total_mdr = filtered_df['net_mdr'].sum()
+        total_settlement = filtered_df['settlement_amount'].sum()
+        
+        st.metric("Total Transactions", f"{total_transactions:,}")
+        st.metric("Total Amount", f"${total_amount:,.2f}")
+        st.metric("Total MDR", f"${total_mdr:,.2f}")
+        st.metric("Total Settlement", f"${total_settlement:,.2f}")
+        
+        st.write("---")
+        st.subheader("🏢 By Branch")
+        branch_summary = filtered_df.groupby('branch_name').agg({
+            'transaction_amount': 'sum',
+            'net_mdr': 'sum',
+            'settlement_amount': 'sum'
+        }).reset_index()
+        branch_summary.columns = ["Branch", "Amount", "MDR", "Settlement"]
+        st.dataframe(branch_summary, use_container_width=True, hide_index=True)
+        
+        st.write("---")
+        st.subheader("📅 By Date")
+        date_summary = filtered_df.groupby('Just Date').agg({
+            'transaction_amount': 'sum',
+            'net_mdr': 'sum',
+            'settlement_amount': 'sum'
+        }).reset_index()
+        date_summary.columns = ["Date", "Amount", "MDR", "Settlement"]
+        st.dataframe(date_summary, use_container_width=True, hide_index=True)
 else:
     st.info("Logbook is empty. Upload CSV files to begin.")
