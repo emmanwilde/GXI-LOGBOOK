@@ -4,11 +4,10 @@ import gdown
 import os
 import sqlite3
 
-# 1. Database Setup (Added all your requested columns)
+# 1. Database Setup
 def init_db():
     conn = sqlite3.connect("data.db")
     c = conn.cursor()
-    # We create the table with all columns. Transaction Code is the "ID" to prevent duplicates.
     c.execute('''CREATE TABLE IF NOT EXISTS logs
                  (branch_name TEXT, 
                   branch_display_name TEXT, 
@@ -26,86 +25,91 @@ def init_db():
     conn.close()
 
 # 2. Web Interface Configuration
-st.set_page_config(page_title="Full Transaction Logbook", layout="wide")
+st.set_page_config(page_title="Transaction Manager", layout="wide")
 init_db()
 
-st.title("📋 Full Transaction Logbook")
-st.write("This app syncs with Google Drive and displays all transaction details.")
+st.title("🏦 Transaction Logbook Manager")
 
-# Sidebar for Google Drive Folder ID
+# Sidebar for Google Drive
 with st.sidebar:
-    st.header("Settings")
+    st.header("Sync Source")
     folder_id = st.text_input("Google Drive Folder ID")
     sync_btn = st.button("🔄 Sync New Files")
+    st.divider()
+    st.info("The app automatically prevents duplicate entries using the Transaction Code.")
 
 # 3. Processing Logic
 if sync_btn and folder_id:
-    with st.spinner("Downloading and processing files..."):
+    with st.spinner("Downloading and processing..."):
         try:
             output_dir = "temp_csvs"
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-            
-            # Download folder contents
+            if not os.path.exists(output_dir): os.makedirs(output_dir)
             gdown.download_folder(id=folder_id, output=output_dir, quiet=True, remaining_ok=True)
             
             conn = sqlite3.connect("data.db")
             new_rows = 0
-            
             for filename in os.listdir(output_dir):
-                # We only want the detail files, not the "Summary" files
                 if filename.endswith(".csv") and "Summary" not in filename:
-                    path = os.path.join(output_dir, filename)
-                    df = pd.read_csv(path)
-                    
+                    df = pd.read_csv(os.path.join(output_dir, filename))
                     for _, row in df.iterrows():
                         try:
-                            # Inserting every column into the database
                             conn.execute("""INSERT INTO logs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", 
-                                       (str(row.get('Branch Name', '')),
-                                        str(row.get('Branch Display Name', '')),
-                                        str(row.get('Branch Code', '')),
-                                        str(row.get('MQR Code', '')),
-                                        str(row.get('Transaction Code', '')),
-                                        str(row.get('Transaction Date Time', '')),
-                                        str(row.get('Channel', '')),
-                                        str(row.get('Type', '')),
-                                        float(row.get('Transaction Amount', 0)),
-                                        float(row.get('Net MDR', 0)),
-                                        float(row.get('Settlement Amount', 0)),
-                                        str(row.get('Remark', ''))))
+                                       (str(row.get('Branch Name', '')), str(row.get('Branch Display Name', '')),
+                                        str(row.get('Branch Code', '')), str(row.get('MQR Code', '')),
+                                        str(row.get('Transaction Code', '')), str(row.get('Transaction Date Time', '')),
+                                        str(row.get('Channel', '')), str(row.get('Type', '')),
+                                        float(row.get('Transaction Amount', 0)), float(row.get('Net MDR', 0)),
+                                        float(row.get('Settlement Amount', 0)), str(row.get('Remark', ''))))
                             new_rows += 1
-                        except sqlite3.IntegrityError:
-                            continue # This skips rows that are already in the database
-            
+                        except sqlite3.IntegrityError: continue 
             conn.commit()
             conn.close()
             st.success(f"Sync complete! Added {new_rows} new transactions.")
-            
         except Exception as e:
             st.error(f"Error: {e}")
 
-# 4. Display the Data
-st.subheader("Stored Transactions")
+# 4. Display Logic with Tabs
 conn = sqlite3.connect("data.db")
-# This pulls everything from the database
 full_df = pd.read_sql_query("SELECT * FROM logs ORDER BY transaction_date_time DESC", conn)
 conn.close()
 
 if not full_df.empty:
-    # Optional: Format the numbers to look like currency
-    st.dataframe(full_df, use_container_width=True)
-    
-    # Summary Metrics at the top
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Total Transactions", len(full_df))
-    with col2:
-        total_settled = full_df['settlement_amount'].sum()
-        st.metric("Total Settlement", f"₱{total_settled:,.2f}")
+    # Summary Metrics
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Total Entries", len(full_df))
+    m2.metric("Total Amount", f"₱{full_df['transaction_amount'].sum():,.2f}")
+    m3.metric("Net Settlement", f"₱{full_df['settlement_amount'].sum():,.2f}")
 
-    # Export button
-    csv = full_df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download All Data as CSV", csv, "full_logbook.csv", "text/csv")
+    # Create the Tabs
+    tab1, tab2 = st.tabs(["📋 Simplified Logbook", "🔍 All Transaction Details"])
+
+    with tab1:
+        st.subheader("Daily Logbook View")
+        # Selecting only the 5 columns you requested
+        logbook_cols = [
+            'transaction_date_time', 
+            'transaction_amount', 
+            'branch_name', 
+            'transaction_code', 
+            'settlement_amount'
+        ]
+        logbook_df = full_df[logbook_cols].copy()
+        
+        # Rename for better reading
+        logbook_df.columns = ["Date & Time", "Amount", "Branch", "Trans. Code", "Settlement"]
+        
+        st.dataframe(logbook_df, use_container_width=True)
+        
+        # Specific download for this view
+        csv_log = logbook_df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download This Logbook", csv_log, "daily_logbook.csv", "text/csv")
+
+    with tab2:
+        st.subheader("Complete Data Masterlist")
+        st.dataframe(full_df, use_container_width=True)
+        
+        # Specific download for all data
+        csv_full = full_df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Full Masterlist", csv_full, "full_details.csv", "text/csv")
 else:
-    st.info("No data in the database yet. Enter your Folder ID and click Sync.")
+    st.info("No data found. Please sync with your Google Drive folder.")
