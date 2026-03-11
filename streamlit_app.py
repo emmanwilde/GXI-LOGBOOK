@@ -3,6 +3,7 @@ import pandas as pd
 import gdown
 import os
 import sqlite3
+from datetime import datetime
 
 # 1. Database Setup
 def init_db():
@@ -25,20 +26,24 @@ def init_db():
     conn.close()
 
 # 2. Web Interface Configuration
-st.set_page_config(page_title="Transaction Manager", layout="wide")
+st.set_page_config(page_title="Filtered Logbook", layout="wide")
 init_db()
 
-st.title("🏦 Transaction Logbook Manager")
+st.title("🏦 Smart Transaction Logbook")
 
-# Sidebar for Google Drive
+# Sidebar for Syncing and Filtering
 with st.sidebar:
-    st.header("Sync Source")
+    st.header("1. Sync Data")
     folder_id = st.text_input("Google Drive Folder ID")
     sync_btn = st.button("🔄 Sync New Files")
+    
     st.divider()
-    st.info("The app automatically prevents duplicate entries using the Transaction Code.")
+    
+    st.header("2. Filter Logbook")
+    # We will populate these filters after loading the data
+    st.info("Use the filters below to clean up your Logbook View.")
 
-# 3. Processing Logic
+# 3. Processing Logic (Google Drive Sync)
 if sync_btn and folder_id:
     with st.spinner("Downloading and processing..."):
         try:
@@ -68,48 +73,59 @@ if sync_btn and folder_id:
         except Exception as e:
             st.error(f"Error: {e}")
 
-# 4. Display Logic with Tabs
+# 4. Data Loading & Filtering
 conn = sqlite3.connect("data.db")
-full_df = pd.read_sql_query("SELECT * FROM logs ORDER BY transaction_date_time DESC", conn)
+df = pd.read_sql_query("SELECT * FROM logs", conn)
 conn.close()
 
-if not full_df.empty:
-    # Summary Metrics
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Total Entries", len(full_df))
-    m2.metric("Total Amount", f"₱{full_df['transaction_amount'].sum():,.2f}")
-    m3.metric("Net Settlement", f"₱{full_df['settlement_amount'].sum():,.2f}")
+if not df.empty:
+    # --- DATA PREPARATION ---
+    # Convert 'transaction_date_time' to a proper date object
+    df['full_dt'] = pd.to_datetime(df['transaction_date_time'])
+    df['Just Date'] = df['full_dt'].dt.date  # Creates the YYYY-MM-DD format
+    
+    # --- SIDEBAR FILTERS ---
+    unique_dates = sorted(df['Just Date'].unique(), reverse=True)
+    unique_branches = sorted(df['branch_name'].unique())
+    
+    with st.sidebar:
+        selected_date = st.selectbox("Select Date", ["All Dates"] + [d.strftime("%Y-%m-%d") for d in unique_dates])
+        selected_branch = st.selectbox("Select Branch", ["All Branches"] + unique_branches)
 
-    # Create the Tabs
-    tab1, tab2 = st.tabs(["📋 Simplified Logbook", "🔍 All Transaction Details"])
+    # Apply Filters
+    filtered_df = df.copy()
+    if selected_date != "All Dates":
+        filtered_df = filtered_df[filtered_df['Just Date'].astype(str) == selected_date]
+    if selected_branch != "All Branches":
+        filtered_df = filtered_df[filtered_df['branch_name'] == selected_branch]
+
+    # --- SORTING ---
+    # Sort by Date (Descending) and then Branch Name (Alphabetical A-Z)
+    filtered_df = filtered_df.sort_values(by=['Just Date', 'branch_name'], ascending=[False, True])
+
+    # --- TABS ---
+    tab1, tab2 = st.tabs(["📋 Filtered Logbook", "🔍 Full Masterlist"])
 
     with tab1:
-        st.subheader("Daily Logbook View")
-        # Selecting only the 5 columns you requested
-        logbook_cols = [
-            'transaction_date_time', 
-            'transaction_amount', 
-            'branch_name', 
-            'transaction_code', 
-            'settlement_amount'
-        ]
-        logbook_df = full_df[logbook_cols].copy()
+        st.subheader(f"Logbook: {selected_date} | {selected_branch}")
         
-        # Rename for better reading
-        logbook_df.columns = ["Date & Time", "Amount", "Branch", "Trans. Code", "Settlement"]
+        # Display requested columns
+        display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'settlement_amount']
+        logbook_view = filtered_df[display_cols].copy()
         
-        st.dataframe(logbook_df, use_container_width=True)
+        # Rename for the physical logbook
+        logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Settlement"]
         
-        # Specific download for this view
-        csv_log = logbook_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download This Logbook", csv_log, "daily_logbook.csv", "text/csv")
+        st.dataframe(logbook_view, use_container_width=True, hide_index=True)
+        
+        # Metrics for the filtered view
+        c1, c2 = st.columns(2)
+        c1.metric("Transaction Count", len(logbook_view))
+        c2.metric("Total Settlement", f"₱{logbook_view['Settlement'].sum():,.2f}")
 
     with tab2:
-        st.subheader("Complete Data Masterlist")
-        st.dataframe(full_df, use_container_width=True)
-        
-        # Specific download for all data
-        csv_full = full_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Full Masterlist", csv_full, "full_details.csv", "text/csv")
+        st.subheader("Raw Data (All Columns)")
+        st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True)
+
 else:
-    st.info("No data found. Please sync with your Google Drive folder.")
+    st.info("Database is empty. Please enter your Google Drive Folder ID and click Sync.")
