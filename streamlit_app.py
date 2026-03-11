@@ -104,9 +104,9 @@ if not df.empty:
     # Display
     tab1, tab2 = st.tabs(["📋 Logbook View", "🔍 Full Masterlist"])
     with tab1:
-        display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'settlement_amount']
+        display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'channel', 'settlement_amount']
         logbook_view = filtered_df[display_cols].copy()
-        logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Settlement"]
+        logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Channel", "Settlement"]
         st.dataframe(logbook_view, use_container_width=True, hide_index=True)
     
     with tab2:
