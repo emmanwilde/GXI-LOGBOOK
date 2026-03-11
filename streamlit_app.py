@@ -124,10 +124,19 @@ if not df.empty:
             display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'channel', 'settlement_amount']
             logbook_view = filtered_df[display_cols].copy()
             logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Channel", "Settlement"]
-            st.dataframe(logbook_view, use_container_width=True, hide_index=True)
+            if len(logbook_view) > 100:
+                st.dataframe(logbook_view.head(100), use_container_width=True, hide_index=True)
+                st.caption(f"Showing first 100 of {len(logbook_view)} rows")
+            else:
+                st.dataframe(logbook_view, use_container_width=True, hide_index=True)
         
         with tab2:
-            st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True, hide_index=True)
+            full_df = filtered_df.drop(columns=['full_dt', 'Just Date'])
+            if len(full_df) > 100:
+                st.dataframe(full_df.head(100), use_container_width=True, hide_index=True)
+                st.caption(f"Showing first 100 of {len(full_df)} rows")
+            else:
+                st.dataframe(full_df, use_container_width=True, hide_index=True)
 
     with right_col:
         st.subheader("📊 Summary")
