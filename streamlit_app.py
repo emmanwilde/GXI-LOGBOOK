@@ -98,9 +98,10 @@ st.write("---")
 
 if not df.empty:
     # Filters
-    with st.sidebar:
-        st.header("🔍 Filters")
+    f_col1, f_col2 = st.columns(2)
+    with f_col1:
         date_range = st.date_input("📅 Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
+    with f_col2:
         selected_branch = st.selectbox("🏢 Branch", ["All Branches"] + unique_branches)
     
     # Apply filters
