@@ -144,12 +144,18 @@ if not df.empty:
         total_mdr = filtered_df['net_mdr'].sum()
         total_settlement = filtered_df['settlement_amount'].sum()
         
-        m_col1, m_col2 = st.columns([1, 2])
-        with m_col2:
-            st.metric("Total Transactions", f"{total_transactions:,}")
-            st.metric("Total Amount", f"₱{total_amount:,.2f}")
-            st.metric("Total MDR", f"₱{total_mdr:,.2f}")
-            st.metric("Total Settlement", f"₱{total_settlement:,.2f}")
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <div style="font-size: 14px; color: gray;">Total Transactions</div>
+            <div style="font-size: 24px; font-weight: bold;">{total_transactions:,}</div>
+            <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Amount</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{total_amount:,.2f}</div>
+            <div style="font-size: 14px; color: gray; margin-top: 10px;">Total MDR</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{total_mdr:,.2f}</div>
+            <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Settlement</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{total_settlement:,.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.write("---")
         st.subheader("🏢 By Branch")
