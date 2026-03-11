@@ -5,6 +5,10 @@ import os
 import sqlite3
 from datetime import datetime
 
+# --- CONFIGURATION ---
+# Your specific Google Drive Folder ID
+FOLDER_ID = "1wj_ogjhv0akqxuvZF4y6FO4dAQLf7fk4"
+
 # 1. Database Setup
 def init_db():
     conn = sqlite3.connect("data.db")
@@ -25,107 +29,115 @@ def init_db():
     conn.commit()
     conn.close()
 
-# 2. Web Interface Configuration
-st.set_page_config(page_title="Filtered Logbook", layout="wide")
+# 2. Sync Function
+def sync_data():
+    output_dir = "temp_csvs"
+    if not os.path.exists(output_dir): 
+        os.makedirs(output_dir)
+    
+    # Download folder contents from hardcoded ID
+    gdown.download_folder(id=FOLDER_ID, output=output_dir, quiet=True, remaining_ok=True)
+    
+    conn = sqlite3.connect("data.db")
+    new_rows = 0
+    
+    # Process files
+    for filename in os.listdir(output_dir):
+        if filename.endswith(".csv") and "Summary" not in filename:
+            try:
+                df = pd.read_csv(os.path.join(output_dir, filename))
+                for _, row in df.iterrows():
+                    try:
+                        conn.execute("""INSERT INTO logs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", 
+                                   (str(row.get('Branch Name', '')), str(row.get('Branch Display Name', '')),
+                                    str(row.get('Branch Code', '')), str(row.get('MQR Code', '')),
+                                    str(row.get('Transaction Code', '')), str(row.get('Transaction Date Time', '')),
+                                    str(row.get('Channel', '')), str(row.get('Type', '')),
+                                    float(row.get('Transaction Amount', 0)), float(row.get('Net MDR', 0)),
+                                    float(row.get('Settlement Amount', 0)), str(row.get('Remark', ''))))
+                        new_rows += 1
+                    except sqlite3.IntegrityError: 
+                        continue # Skip duplicates
+            except Exception:
+                continue
+    
+    conn.commit()
+    conn.close()
+    return new_rows
+
+# 3. Web App UI
+st.set_page_config(page_title="Transaction Logbook", layout="wide")
 init_db()
 
-st.title("🏦 Smart Transaction Logbook")
+st.title("🏦 Transaction Logbook Automator")
 
-# Sidebar for Syncing and Filtering
-with st.sidebar:
-    st.header("1. Sync Data")
-    folder_id = st.text_input("Google Drive Folder ID")
-    sync_btn = st.button("🔄 Sync New Files")
-    
-    st.divider()
-    
-    st.header("2. Filter Logbook")
-    # We will populate these filters after loading the data
-    st.info("Use the filters below to clean up your Logbook View.")
+# --- TOP CONTROLS ---
+# Row for Refresh Button and Info
+col1, col2 = st.columns([1, 4])
+with col1:
+    if st.button("🔄 Refresh & Sync Data"):
+        with st.spinner("Syncing..."):
+            new_added = sync_data()
+            st.toast(f"Sync complete! Added {new_added} new entries.")
+            st.rerun()
 
-# 3. Processing Logic (Google Drive Sync)
-if sync_btn and folder_id:
-    with st.spinner("Downloading and processing..."):
-        try:
-            output_dir = "temp_csvs"
-            if not os.path.exists(output_dir): os.makedirs(output_dir)
-            gdown.download_folder(id=folder_id, output=output_dir, quiet=True, remaining_ok=True)
-            
-            conn = sqlite3.connect("data.db")
-            new_rows = 0
-            for filename in os.listdir(output_dir):
-                if filename.endswith(".csv") and "Summary" not in filename:
-                    df = pd.read_csv(os.path.join(output_dir, filename))
-                    for _, row in df.iterrows():
-                        try:
-                            conn.execute("""INSERT INTO logs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", 
-                                       (str(row.get('Branch Name', '')), str(row.get('Branch Display Name', '')),
-                                        str(row.get('Branch Code', '')), str(row.get('MQR Code', '')),
-                                        str(row.get('Transaction Code', '')), str(row.get('Transaction Date Time', '')),
-                                        str(row.get('Channel', '')), str(row.get('Type', '')),
-                                        float(row.get('Transaction Amount', 0)), float(row.get('Net MDR', 0)),
-                                        float(row.get('Settlement Amount', 0)), str(row.get('Remark', ''))))
-                            new_rows += 1
-                        except sqlite3.IntegrityError: continue 
-            conn.commit()
-            conn.close()
-            st.success(f"Sync complete! Added {new_rows} new transactions.")
-        except Exception as e:
-            st.error(f"Error: {e}")
-
-# 4. Data Loading & Filtering
+# Load Data for Filtering
 conn = sqlite3.connect("data.db")
 df = pd.read_sql_query("SELECT * FROM logs", conn)
 conn.close()
 
 if not df.empty:
-    # --- DATA PREPARATION ---
-    # Convert 'transaction_date_time' to a proper date object
+    # Prepare date info
     df['full_dt'] = pd.to_datetime(df['transaction_date_time'])
-    df['Just Date'] = df['full_dt'].dt.date  # Creates the YYYY-MM-DD format
+    df['Just Date'] = df['full_dt'].dt.date
     
-    # --- SIDEBAR FILTERS ---
+    # --- FILTERS ABOVE TABLES ---
+    st.write("### Filters")
+    f_col1, f_col2 = st.columns(2)
+    
     unique_dates = sorted(df['Just Date'].unique(), reverse=True)
     unique_branches = sorted(df['branch_name'].unique())
     
-    with st.sidebar:
-        selected_date = st.selectbox("Select Date", ["All Dates"] + [d.strftime("%Y-%m-%d") for d in unique_dates])
-        selected_branch = st.selectbox("Select Branch", ["All Branches"] + unique_branches)
+    with f_col1:
+        selected_date = st.selectbox("📅 Filter by Date", ["All Dates"] + [d.strftime("%Y-%m-%d") for d in unique_dates])
+    with f_col2:
+        selected_branch = st.selectbox("🏢 Filter by Branch Name", ["All Branches"] + unique_branches)
 
-    # Apply Filters
+    # Apply Filtering
     filtered_df = df.copy()
     if selected_date != "All Dates":
         filtered_df = filtered_df[filtered_df['Just Date'].astype(str) == selected_date]
     if selected_branch != "All Branches":
         filtered_df = filtered_df[filtered_df['branch_name'] == selected_branch]
 
-    # --- SORTING ---
-    # Sort by Date (Descending) and then Branch Name (Alphabetical A-Z)
+    # Sort: Date (Newest first) then Branch Name (Alphabetical A-Z)
     filtered_df = filtered_df.sort_values(by=['Just Date', 'branch_name'], ascending=[False, True])
 
-    # --- TABS ---
-    tab1, tab2 = st.tabs(["📋 Filtered Logbook", "🔍 Full Masterlist"])
+    # --- SUMMARY METRICS ---
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Selected Entries", len(filtered_df))
+    m2.metric("Total Amount", f"₱{filtered_df['transaction_amount'].sum():,.2f}")
+    m3.metric("Net Settlement", f"₱{filtered_df['settlement_amount'].sum():,.2f}")
+
+    # --- TABS FOR TABLES ---
+    tab1, tab2 = st.tabs(["📋 Logbook View", "🔍 Full Masterlist"])
 
     with tab1:
-        st.subheader(f"Logbook: {selected_date} | {selected_branch}")
-        
-        # Display requested columns
+        # Display the 5 columns you requested
         display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'settlement_amount']
         logbook_view = filtered_df[display_cols].copy()
-        
-        # Rename for the physical logbook
         logbook_view.columns = ["Date", "Amount", "Branch Name", "Trans. Code", "Settlement"]
         
         st.dataframe(logbook_view, use_container_width=True, hide_index=True)
         
-        # Metrics for the filtered view
-        c1, c2 = st.columns(2)
-        c1.metric("Transaction Count", len(logbook_view))
-        c2.metric("Total Settlement", f"₱{logbook_view['Settlement'].sum():,.2f}")
+        csv_log = logbook_view.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Logbook CSV", csv_log, f"logbook_{selected_date}.csv", "text/csv")
 
     with tab2:
-        st.subheader("Raw Data (All Columns)")
-        st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True)
+        st.dataframe(filtered_df.drop(columns=['full_dt', 'Just Date']), use_container_width=True, hide_index=True)
+        
+        csv_full = filtered_df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Full Masterlist", csv_full, "full_masterlist.csv", "text/csv")
 
 else:
-    st.info("Database is empty. Please enter your Google Drive Folder ID and click Sync.")
+    st.info("The database is currently empty. Click the 'Refresh & Sync Data' button above to pull files from Google Drive.")
