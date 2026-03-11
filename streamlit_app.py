@@ -97,28 +97,28 @@ else:
 st.write("---")
 
 if not df.empty:
-    # Filters
-    f_col1, f_col2 = st.columns(2)
-    with f_col1:
-        date_range = st.date_input("📅 Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
-    with f_col2:
-        selected_branch = st.selectbox("🏢 Branch", ["All Branches"] + unique_branches)
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if len(date_range) == 2:
-        filtered_df = filtered_df[(filtered_df['Just Date'] >= date_range[0]) & (filtered_df['Just Date'] <= date_range[1])]
-    elif len(date_range) == 1:
-        filtered_df = filtered_df[filtered_df['Just Date'] == date_range[0]]
-    if selected_branch != "All Branches":
-        filtered_df = filtered_df[filtered_df['branch_name'] == selected_branch]
-
-    filtered_df = filtered_df.sort_values(by=['Just Date', 'branch_name'], ascending=[False, True])
-
     # Two column layout
     left_col, right_col = st.columns([2, 1])
 
     with left_col:
+        # Filters above table
+        f_col1, f_col2 = st.columns(2)
+        with f_col1:
+            date_range = st.date_input("📅 Date Range", value=(max_date, max_date), min_value=min_date, max_value=max_date)
+        with f_col2:
+            selected_branch = st.selectbox("🏢 Branch", ["All Branches"] + unique_branches)
+        
+        # Apply filters
+        filtered_df = df.copy()
+        if len(date_range) == 2:
+            filtered_df = filtered_df[(filtered_df['Just Date'] >= date_range[0]) & (filtered_df['Just Date'] <= date_range[1])]
+        elif len(date_range) == 1:
+            filtered_df = filtered_df[filtered_df['Just Date'] == date_range[0]]
+        if selected_branch != "All Branches":
+            filtered_df = filtered_df[filtered_df['branch_name'] == selected_branch]
+
+        filtered_df = filtered_df.sort_values(by=['Just Date', 'branch_name'], ascending=[False, True])
+
         tab1, tab2 = st.tabs(["📋 Logbook View", "🔍 Full Masterlist"])
         with tab1:
             display_cols = ['Just Date', 'transaction_amount', 'branch_name', 'transaction_code', 'channel', 'settlement_amount']
