@@ -45,10 +45,10 @@ init_db()
 st.title("🏦 Transaction Logbook Manager")
 st.write("Upload your daily CSV files below to update the logbook. Duplicates are automatically removed.")
 
-# --- FILE UPLOADER REPLACES GOOGLE DRIVE ---
+# --- FILE UPLOADER ---
 uploaded_files = st.file_uploader("Drag and drop your CSV files here", type="csv", accept_multiple_files=True)
 
-if st.button("🚀 Process Uploaded Files") and uploaded_files:
+if uploaded_files:
     conn = sqlite3.connect("data.db")
     new_rows = 0
     
@@ -69,7 +69,9 @@ if st.button("🚀 Process Uploaded Files") and uploaded_files:
                     continue 
     conn.commit()
     conn.close()
-    st.success(f"Done! Added {new_rows} new unique transactions.")
+    if new_rows > 0:
+        st.success(f"Done! Added {new_rows} new unique transactions.")
+        st.rerun()
 
 # --- LOAD DATA ---
 conn = sqlite3.connect("data.db")
