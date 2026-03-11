@@ -145,9 +145,9 @@ if not df.empty:
         total_settlement = filtered_df['settlement_amount'].sum()
         
         st.metric("Total Transactions", f"{total_transactions:,}")
-        st.metric("Total Amount", f"${total_amount:,.2f}")
-        st.metric("Total MDR", f"${total_mdr:,.2f}")
-        st.metric("Total Settlement", f"${total_settlement:,.2f}")
+        st.metric("Total Amount", f"₱{total_amount:,.2f}")
+        st.metric("Total MDR", f"₱{total_mdr:,.2f}")
+        st.metric("Total Settlement", f"₱{total_settlement:,.2f}")
         
         st.write("---")
         st.subheader("🏢 By Branch")
@@ -157,6 +157,9 @@ if not df.empty:
             'settlement_amount': 'sum'
         }).reset_index()
         branch_summary.columns = ["Branch", "Amount", "MDR", "Settlement"]
+        branch_summary["Amount"] = branch_summary["Amount"].apply(lambda x: f"₱{x:,.2f}")
+        branch_summary["MDR"] = branch_summary["MDR"].apply(lambda x: f"₱{x:,.2f}")
+        branch_summary["Settlement"] = branch_summary["Settlement"].apply(lambda x: f"₱{x:,.2f}")
         st.dataframe(branch_summary, use_container_width=True, hide_index=True)
         
         st.write("---")
@@ -167,6 +170,9 @@ if not df.empty:
             'settlement_amount': 'sum'
         }).reset_index()
         date_summary.columns = ["Date", "Amount", "MDR", "Settlement"]
+        date_summary["Amount"] = date_summary["Amount"].apply(lambda x: f"₱{x:,.2f}")
+        date_summary["MDR"] = date_summary["MDR"].apply(lambda x: f"₱{x:,.2f}")
+        date_summary["Settlement"] = date_summary["Settlement"].apply(lambda x: f"₱{x:,.2f}")
         st.dataframe(date_summary, use_container_width=True, hide_index=True)
 else:
     st.info("Logbook is empty. Upload CSV files to begin.")
