@@ -3,6 +3,21 @@ import pandas as pd
 import sqlite3
 import io
 
+# Password protection
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.set_page_config(page_title="Login - Transaction Logbook", layout="centered")
+    st.title("🔐 Login Required")
+    password = st.text_input("Enter Password", type="password")
+    if password == "PA$$WORD":
+        st.session_state.authenticated = True
+        st.rerun()
+    elif password:
+        st.error("Incorrect password")
+    st.stop()
+
 # 1. Database Setup
 def init_db():
     conn = sqlite3.connect("data.db")
