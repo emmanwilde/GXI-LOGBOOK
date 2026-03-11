@@ -137,17 +137,19 @@ if not df.empty:
             st.dataframe(full_df.head(100), use_container_width=True, hide_index=True, height=height)
 
     with right_col:
-        st.subheader("📊 Summary")
+        st.markdown("### 📊 Summary")
         
         total_transactions = len(filtered_df)
         total_amount = filtered_df['transaction_amount'].sum()
         total_mdr = filtered_df['net_mdr'].sum()
         total_settlement = filtered_df['settlement_amount'].sum()
         
-        st.metric("Total Transactions", f"{total_transactions:,}")
-        st.metric("Total Amount", f"₱{total_amount:,.2f}")
-        st.metric("Total MDR", f"₱{total_mdr:,.2f}")
-        st.metric("Total Settlement", f"₱{total_settlement:,.2f}")
+        m_col1, m_col2 = st.columns([1, 2])
+        with m_col2:
+            st.metric("Total Transactions", f"{total_transactions:,}")
+            st.metric("Total Amount", f"₱{total_amount:,.2f}")
+            st.metric("Total MDR", f"₱{total_mdr:,.2f}")
+            st.metric("Total Settlement", f"₱{total_settlement:,.2f}")
         
         st.write("---")
         st.subheader("🏢 By Branch")
