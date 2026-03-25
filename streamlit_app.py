@@ -1,9 +1,19 @@
 import streamlit as st
 import pandas as pd
-from google.cloud import firestore
+import json
 import os
+from google.cloud import firestore
+import google.oauth2.service_account
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'firebase-credentials.json'
+def get_firestore_client():
+    try:
+        if hasattr(st, 'secrets') and 'firebase' in st.secrets:
+            creds_dict = dict(st.secrets['firebase'])
+            credentials = google.oauth2.service_account.Credentials.from_service_account_info(creds_dict)
+            return firestore.Client(credentials=credentials)
+    except Exception as e:
+        st.error(f"Failed to load credentials from secrets: {e}")
+    return firestore.Client()
 
 FIRESTORE_HEADERS = [
     'Branch Name',
@@ -36,7 +46,7 @@ if not st.session_state.authenticated:
 
 @st.cache_data(ttl=60)
 def load_firestore_data():
-    db = firestore.Client()
+    db = get_firestore_client()
     docs = db.collection('transactions').get()
     data = []
     for doc in docs:
