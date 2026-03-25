@@ -12,8 +12,11 @@ if not st.session_state.authenticated:
     st.set_page_config(page_title="Login - Transaction Logbook", layout="centered", page_icon="🏦")
     st.markdown("""
     <style>
-        .stApp { background-color: #fce4ec; }
+        .stApp { background-color: #1a1a2e; }
         .stButton > button { background-color: #e91e63; color: white; }
+        .stTextInput input { background-color: #16213e; color: #f8bbd0; }
+        .stTitle { color: #e91e63 !important; }
+        label { color: #f8bbd0 !important; }
     </style>
     """, unsafe_allow_html=True)
     st.title("🔐 Login Required")
@@ -29,17 +32,25 @@ st.set_page_config(page_title="Transaction Logbook", layout="wide", page_icon="�
 
 st.markdown("""
 <style>
-    .stApp { background-color: #fce4ec; }
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #e91e63; }
+    .stApp { background-color: #1a1a2e; }
+    .stMarkdown h1 { color: #e91e63 !important; }
+    .stMarkdown h2, .stMarkdown h3 { color: #f8bbd0 !important; }
+    .stMarkdown p { color: #f8bbd0; }
     .stButton > button { background-color: #e91e63; color: white; border: none; }
-    .stButton > button:hover { background-color: #c2185b; color: white; }
-    .stDataFrame { background-color: white; }
+    .stButton > button:hover { background-color: #c2185b; }
+    .stDataFrame { background-color: #16213e; }
     div[data-testid="stMetricValue"] { color: #e91e63; }
+    div[data-testid="stMetricLabel"] { color: #f48fb1; }
     .stTabs button[aria-selected="true"] { background-color: #e91e63; color: white; }
-    .stTextInput input:focus, .stSelectbox div[data-baseweb="select"] { border-color: #e91e63; }
-    .stDateInput input:focus { border-color: #e91e63; }
+    .stTextInput input { background-color: #16213e; color: #f8bbd0; border-color: #e91e63; }
+    .stSelectbox div[data-baseweb="select"] { background-color: #16213e; color: #f8bbd0; }
+    .stDateInput input { background-color: #16213e; color: #f8bbd0; }
+    .stMarkdown [data-testid="stMarkdownContainer"] p { color: #f8bbd0; }
+    label, .stSelectbox label { color: #f8bbd0 !important; }
+    div[data-testid="stDataFrame"] { background-color: #16213e; }
+    div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] th { color: #f8bbd0 !important; }
     ::-webkit-scrollbar-thumb { background: #e91e63; }
-    ::-webkit-scrollbar-track { background: #fce4ec; }
+    ::-webkit-scrollbar-track { background: #1a1a2e; }
 </style>
 """, unsafe_allow_html=True)
 
