@@ -1,3 +1,5 @@
 streamlit>=1.31.0
 pandas
 gdown
+firebase-admin
+google-cloud-firestore
