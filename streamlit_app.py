@@ -129,10 +129,10 @@ if not df.empty:
     with right_col:
         st.markdown("### 📊 Summary")
         
-        total_transactions = len(filtered_df)
-        total_amount = filtered_df['Transaction Amount'].sum() if 'Transaction Amount' in filtered_df.columns else 0
-        total_mdr = filtered_df['Net MDR'].sum() if 'Net MDR' in filtered_df.columns else 0
-        total_settlement = filtered_df['Settlement Amount'].sum() if 'Settlement Amount' in filtered_df.columns else 0
+        total_transactions = int(len(filtered_df))
+        total_amount = float(filtered_df['Transaction Amount'].sum()) if 'Transaction Amount' in filtered_df.columns else 0.0
+        total_mdr = float(filtered_df['Net MDR'].sum()) if 'Net MDR' in filtered_df.columns else 0.0
+        total_settlement = float(filtered_df['Settlement Amount'].sum()) if 'Settlement Amount' in filtered_df.columns else 0.0
         
         st.markdown("""
         <div style="text-align: center;">
