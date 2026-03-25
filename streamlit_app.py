@@ -6,14 +6,18 @@ from google.cloud import firestore
 import google.oauth2.service_account
 
 def get_firestore_client():
+    if not hasattr(st, 'secrets') or 'firebase' not in st.secrets:
+        st.error("⚠️ Firebase credentials not configured in Streamlit secrets.")
+        st.info("Go to App settings > Secrets and add your Firebase service account JSON.")
+        st.stop()
+    
     try:
-        if hasattr(st, 'secrets') and 'firebase' in st.secrets:
-            creds_dict = dict(st.secrets['firebase'])
-            credentials = google.oauth2.service_account.Credentials.from_service_account_info(creds_dict)
-            return firestore.Client(credentials=credentials)
+        creds_dict = dict(st.secrets['firebase'])
+        credentials = google.oauth2.service_account.Credentials.from_service_account_info(creds_dict)
+        return firestore.Client(credentials=credentials)
     except Exception as e:
-        st.error(f"Failed to load credentials from secrets: {e}")
-    return firestore.Client()
+        st.error(f"Failed to initialize Firestore: {e}")
+        st.stop()
 
 FIRESTORE_HEADERS = [
     'Branch Name',
@@ -130,18 +134,18 @@ if not df.empty:
         total_mdr = filtered_df['Net MDR'].sum() if 'Net MDR' in filtered_df.columns else 0
         total_settlement = filtered_df['Settlement Amount'].sum() if 'Settlement Amount' in filtered_df.columns else 0
         
-        st.markdown(f"""
+        st.markdown("""
         <div style="text-align: center;">
             <div style="font-size: 14px; color: gray;">Total Transactions</div>
-            <div style="font-size: 24px; font-weight: bold;">{total_transactions:,}</div>
+            <div style="font-size: 24px; font-weight: bold;">{}</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Amount</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{total_amount:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total MDR</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{total_mdr:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Settlement</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{total_settlement:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """.format(total_transactions, total_amount, total_mdr, total_settlement), unsafe_allow_html=True)
         
         st.write("---")
         st.subheader("🏢 By Branch")
