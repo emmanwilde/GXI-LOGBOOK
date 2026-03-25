@@ -154,31 +154,5 @@ if not df.empty:
             <div style="font-size: 24px; font-weight: bold;">₱""" + "{:,.2f}".format(total_settlement) + """</div>
         </div>
         """, unsafe_allow_html=True)
-        
-        st.write("---")
-        st.subheader("🏢 By Branch")
-        branch_summary = filtered_df.groupby('Branch Name').agg({
-            'Transaction Amount': 'sum',
-            'Net MDR': 'sum',
-            'Settlement Amount': 'sum'
-        }).reset_index()
-        branch_summary.columns = ["Branch", "Amount", "MDR", "Settlement"]
-        branch_summary["Amount"] = branch_summary["Amount"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        branch_summary["MDR"] = branch_summary["MDR"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        branch_summary["Settlement"] = branch_summary["Settlement"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        st.dataframe(branch_summary, use_container_width=True, hide_index=True)
-        
-        st.write("---")
-        st.subheader("📅 By Date")
-        date_summary = filtered_df.groupby('Just Date').agg({
-            'Transaction Amount': 'sum',
-            'Net MDR': 'sum',
-            'Settlement Amount': 'sum'
-        }).reset_index()
-        date_summary.columns = ["Date", "Amount", "MDR", "Settlement"]
-        date_summary["Amount"] = date_summary["Amount"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        date_summary["MDR"] = date_summary["MDR"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        date_summary["Settlement"] = date_summary["Settlement"].apply(lambda x: "₱{:,.2f}".format(pd.to_numeric(x, errors='coerce')))
-        st.dataframe(date_summary, use_container_width=True, hide_index=True)
 else:
     st.info("No data found in Firestore.")
