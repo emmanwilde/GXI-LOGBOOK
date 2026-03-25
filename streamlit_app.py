@@ -5,6 +5,44 @@ import os
 from google.cloud import firestore
 import google.oauth2.service_account
 
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.set_page_config(page_title="Login - Transaction Logbook", layout="centered", page_icon="🏦")
+    st.markdown("""
+    <style>
+        .stApp { background-color: #fce4ec; }
+        .stButton > button { background-color: #e91e63; color: white; }
+    </style>
+    """, unsafe_allow_html=True)
+    st.title("🔐 Login Required")
+    password = st.text_input("Enter Password", type="password")
+    if password == "gwapako10":
+        st.session_state.authenticated = True
+        st.rerun()
+    elif password:
+        st.error("Incorrect password")
+    st.stop()
+
+st.set_page_config(page_title="Transaction Logbook", layout="wide", page_icon="🏦")
+
+st.markdown("""
+<style>
+    .stApp { background-color: #fce4ec; }
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 { color: #e91e63; }
+    .stButton > button { background-color: #e91e63; color: white; border: none; }
+    .stButton > button:hover { background-color: #c2185b; color: white; }
+    .stDataFrame { background-color: white; }
+    div[data-testid="stMetricValue"] { color: #e91e63; }
+    .stTabs button[aria-selected="true"] { background-color: #e91e63; color: white; }
+    .stTextInput input:focus, .stSelectbox div[data-baseweb="select"] { border-color: #e91e63; }
+    .stDateInput input:focus { border-color: #e91e63; }
+    ::-webkit-scrollbar-thumb { background: #e91e63; }
+    ::-webkit-scrollbar-track { background: #fce4ec; }
+</style>
+""", unsafe_allow_html=True)
+
 def get_firestore_client():
     if not hasattr(st, 'secrets') or 'firebase' not in st.secrets:
         st.error("⚠️ Firebase credentials not configured in Streamlit secrets.")
@@ -65,8 +103,6 @@ def load_firestore_data():
                 row[header] = ''
         data.append(row)
     return pd.DataFrame(data)
-
-st.set_page_config(page_title="Transaction Logbook", layout="wide")
 
 st.title("🏦 Transaction Logbook Manager")
 st.write("Data loaded from Firestore database.")
