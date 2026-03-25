@@ -129,23 +129,31 @@ if not df.empty:
     with right_col:
         st.markdown("### 📊 Summary")
         
-        total_transactions = int(len(filtered_df))
-        total_amount = float(filtered_df['Transaction Amount'].sum()) if 'Transaction Amount' in filtered_df.columns else 0.0
-        total_mdr = float(filtered_df['Net MDR'].sum()) if 'Net MDR' in filtered_df.columns else 0.0
-        total_settlement = float(filtered_df['Settlement Amount'].sum()) if 'Settlement Amount' in filtered_df.columns else 0.0
+        total_transactions = 0
+        total_amount = 0.0
+        total_mdr = 0.0
+        total_settlement = 0.0
+        
+        if 'Transaction Amount' in filtered_df.columns:
+            total_transactions = int(len(filtered_df))
+            total_amount = float(filtered_df['Transaction Amount'].sum())
+        if 'Net MDR' in filtered_df.columns:
+            total_mdr = float(filtered_df['Net MDR'].sum())
+        if 'Settlement Amount' in filtered_df.columns:
+            total_settlement = float(filtered_df['Settlement Amount'].sum())
         
         st.markdown("""
         <div style="text-align: center;">
             <div style="font-size: 14px; color: gray;">Total Transactions</div>
-            <div style="font-size: 24px; font-weight: bold;">{}</div>
+            <div style="font-size: 24px; font-weight: bold;">""" + str(total_transactions) + """</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Amount</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱""" + "{:,.2f}".format(total_amount) + """</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total MDR</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱""" + "{:,.2f}".format(total_mdr) + """</div>
             <div style="font-size: 14px; color: gray; margin-top: 10px;">Total Settlement</div>
-            <div style="font-size: 24px; font-weight: bold;">₱{:,.2f}</div>
+            <div style="font-size: 24px; font-weight: bold;">₱""" + "{:,.2f}".format(total_settlement) + """</div>
         </div>
-        """.format(total_transactions, total_amount, total_mdr, total_settlement), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
         st.write("---")
         st.subheader("🏢 By Branch")
